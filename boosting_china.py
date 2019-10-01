@@ -3,6 +3,7 @@ import xgboost as xgb
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestClassifier
 
 bbc_text_df = pd.read_excel('./china_data1.xlsx')
 bbc_text_df = bbc_text_df[(bbc_text_df['category'] == 'RTDEVM_PIC') | (bbc_text_df['category'] =='SR_FRAME_DRV') |
@@ -165,12 +166,19 @@ def test_tfidf_logistic_normal():
     scores = cross_val_score(pl_log_reg_tf_idf, df_x, df_y, cv=5,scoring='accuracy')
     print('Accuracy for Tf-Idf & Logistic Regression: ', scores.mean())
 
+def test_tfidf_randomforest():
+    pl_random_forest_tf_idf = Pipeline(steps=[('tfidf',Text2TfIdfTransformer()),
+                                       ('random_forest', RandomForestClassifier())])
+    scores = cross_val_score(pl_random_forest_tf_idf, df_x, df_y, cv=5,scoring='accuracy')
+    print('Accuracy for Tf-Idf & RandomForest : ', scores.mean())
 
 def test_tfidf_xgboost():
     pl_xgb_tf_idf = Pipeline(steps=[('tfidf',Text2TfIdfTransformer()),
                          ('xgboost', xgb.XGBClassifier(objective='multi:softmax'))])
     scores = cross_val_score(pl_xgb_tf_idf, df_x, df_y, cv=5)
     print('Accuracy for Tf-Idf & XGBoost Classifier : ', scores.mean())
-    
-    
+
+
+test_tfidf_logistic_normal()
+test_tfidf_randomforest()
 test_tfidf_xgboost()
