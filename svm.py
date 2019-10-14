@@ -42,15 +42,19 @@ def create_data():
                 Final_words.append(word_Final)
         # The final processed set of words for each iteration will be stored in 'text_final'
         Corpus.loc[index,'text_final'] = str(Final_words)
-        
+
     Corpus.to_pickle("./corpus.pkl")
 
 def create_chinese_data():
-    Corpus = pd.read_excel('./china_data1.xlsx')
-    Corpus = Corpus[(Corpus['category'] == 'RTDEVM_PIC') | (Corpus['category'] =='SR_FRAME_DRV') |
-        (Corpus['category'] =='BR_UM') | (Corpus['category'] =='RT_NSE') | (Corpus['category'] =='RTADAPT_L2VPN') | (Corpus['category'] =='PRODUCT_INCLUDE')]
-    print(Corpus.head())
-    Corpus.to_pickle("./corpus_chinese.pkl")
+    Corpus = pd.read_excel('./wangwenjia.xlsx')
+    #Corpus = Corpus[(Corpus['category'] == 'RTDEVM_PIC') | (Corpus['category'] =='SR_FRAME_DRV') |
+    #    (Corpus['category'] =='BR_UM') | (Corpus['category'] =='RT_NSE') | (Corpus['category'] =='RTADAPT_L2VPN') | (Corpus['category'] =='PRODUCT_INCLUDE')]
+    Corpus = Corpus[(Corpus['category'] == 'FEI_DOP_588X') | (Corpus['category'] =='BR_UM') |
+        (Corpus['category'] =='BOARD_DRIVER') | (Corpus['category'] =='公共模块') | (Corpus['category'] =='BR_AAA') | (Corpus['category'] =='VSM')]
+    #Corpus = Corpus[Corpus.text.apply(lambda x: x.isalpha())]
+    Corpus = Corpus[~Corpus.text.isnull()]
+    #print(Corpus.head())
+    Corpus.to_pickle("./corpus_chinese_clean.pkl")
 
 
 def process1():
@@ -85,7 +89,7 @@ def process1():
 
 
 def process_chinese():
-    Corpus = pd.read_pickle("./corpus_chinese.pkl")
+    Corpus = pd.read_pickle("./corpus_chinese_clean.pkl")
 
     Train_X, Test_X, Train_Y, Test_Y = model_selection.train_test_split(Corpus['text'],Corpus['category'],test_size=0.3)
     Encoder = LabelEncoder()
@@ -115,4 +119,5 @@ def process_chinese():
 
 
 #create_chinese_data()
-process_chinese()
+#process_chinese()
+print('6666')
