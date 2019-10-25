@@ -1,4 +1,12 @@
 # https://drive.google.com/open?id=1ONmD-kYBHIiwJYRDMFKZy2g5-ZQwIwF7
+
+#https://www.netsarang.com/zh/downloading/?token=Z24wQzc2ZGVzRzI0ajM3dlVpVHBQd0BPNk1tWHg5Q3lIMkpHRjBweThTOTRn
+
+
+
+#https://www.netsarang.com/zh/downloading/?token=VUxlWktVZ0VmbHRJVDN1ak5lT05pUUBPNk1tWHg5Q3lIMkpHRjBweThTOTRn
+
+
 import numpy as np
 import pandas as pd
 from scipy import stats
