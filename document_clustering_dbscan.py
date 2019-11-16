@@ -77,6 +77,8 @@ from sklearn.preprocessing import Normalizer
 from sklearn import metrics
 
 from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.cluster import DBSCAN
+
 
 import logging
 from optparse import OptionParser
@@ -98,6 +100,9 @@ op.add_option("--lsa",
 op.add_option("--no-minibatch",
               action="store_false", dest="minibatch", default=True,
               help="Use ordinary k-means algorithm (in batch mode).")
+op.add_option("--dbscan",
+              action="store_true", dest="dbscan", default=True,
+              help="Use DBSCAN.")
 op.add_option("--no-idf",
               action="store_false", dest="use_idf", default=True,
               help="Disable Inverse Document Frequency feature weighting.")
@@ -140,9 +145,9 @@ def loaddocuments():
     rootdir = 'D:\\Data\\lsi\\bbc'
     documents = []
     r = ''
-    
+
     df = pd.read_excel('./path_module2.xlsx')
-    #df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL')] #   | (df['MODULENAME'] == 'RT_NSE')]
+    #df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL') | (df['MODULENAME'] == 'RT_NSE')]
     #    (df['MODULENAME'] =='RTADAPT_FWD_FRAME') | (df['MODULENAME'] =='NP_HAL') | (df['MODULENAME'] =='RT_NSE')]
     j  = 0
     target = np.zeros((df.count()['MODULENAME'],), dtype=np.int64)
@@ -171,8 +176,6 @@ print()
 labels = dataset.target
 true_k = np.unique(labels).shape[0]
 
-print('44444', labels)
-print('555555777', len(labels))
 print("Extracting features from the training dataset using a sparse vectorizer")
 t0 = time()
 if opts.use_hashing:
@@ -219,10 +222,64 @@ if opts.n_components:
 
 ###############################################################################
 # Do the actual clustering
-
-if opts.minibatch:
+if not opts.dbscan and opts.minibatch:
     km = MiniBatchKMeans(n_clusters=true_k, init='k-means++', n_init=1,
                          init_size=1000, batch_size=1000, verbose=opts.verbose)
+elif opts.dbscan:
+    # #############################################################################
+    # Compute DBSCAN
+    print(X)
+    db = DBSCAN(eps=0.3, min_samples=10).fit(X)
+    labels_true = labels
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise_ = list(labels).count(-1)
+
+    print('Estimated number of clusters: %d' % n_clusters_)
+    print('Estimated number of noise points: %d' % n_noise_)
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels_true, labels))
+    print("Completeness: %0.3f" % metrics.completeness_score(labels_true, labels))
+    print("V-measure: %0.3f" % metrics.v_measure_score(labels_true, labels))
+    print("Adjusted Rand Index: %0.3f"
+          % metrics.adjusted_rand_score(labels_true, labels))
+    print("Adjusted Mutual Information: %0.3f"
+          % metrics.adjusted_mutual_info_score(labels_true, labels,
+                                               average_method='arithmetic'))
+    print("Silhouette Coefficient: %0.3f"
+          % metrics.silhouette_score(X, labels))
+          
+    # #############################################################################
+
+
+    # Black removed and is used for noise instead.
+    unique_labels = set(labels)
+    colors = [plt.cm.Spectral(each)
+              for each in np.linspace(0, 1, len(unique_labels))]
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = (labels == k)
+
+        if type(X) != np.ndarray:
+            X = X.toarray()
+        xy = X[class_member_mask & core_samples_mask]
+        
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                 markeredgecolor='k', markersize=14)
+
+        xy = X[class_member_mask & ~core_samples_mask]
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                 markeredgecolor='k', markersize=6)
+
+    plt.title('Estimated number of clusters: %d' % n_clusters_)
+    plt.show()
+
 else:
     km = KMeans(n_clusters=true_k, init='k-means++', max_iter=100, n_init=1,
                 verbose=opts.verbose)
@@ -235,7 +292,7 @@ km.fit(X)
 y_kmeans = km.predict(X)
 
 print("done in %0.3fs" % (time() - t0))
-print('555555', len(labels))
+print()
 
 print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
 print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
@@ -258,61 +315,20 @@ centroids = km.cluster_centers_
 model = TSNE(n_components=2, random_state=random_state, init=tsne_init, perplexity=tsne_perplexity,
          early_exaggeration=tsne_early_exaggeration, learning_rate=tsne_learning_rate)
 
-transformed_centroids1 = model.fit_transform(centroids)
+transformed_centroids = model.fit_transform(centroids)
 #print(centroids)
 #plt.scatter(transformed_centroids[:, 0], transformed_centroids[:, 1], marker='x')
+
+if type(X) == np.ndarray:
+     transformed_centroids = model.fit_transform(X[0:100])
+else:
+    transformed_centroids = model.fit_transform(X.toarray()[0:100])
+
+#plt.scatter(transformed_centroids[:, 0], transformed_centroids[:, 1], marker='o')
+
+#centers = km.cluster_centers_
+#plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5);
 #plt.show()
-if type(X) != np.ndarray:
-    X = np.asarray(X.toarray())
-
-X = np.append(X, km.cluster_centers_, axis=0)
-labels = np.append(labels, range(true_k))
-transformed_centroids = model.fit_transform(X)
-#else:
-#    print('666666666666666666')
-#    transformed_centroids = model.fit_transform(X.toarray())
-
-# Black removed and is used for noise instead.
-unique_labels = set(labels)
-colors = [plt.cm.Spectral(each)
-          for each in np.linspace(0, 1, len(unique_labels))]
-for k, col in zip(unique_labels, colors):
-    if k == -1:
-        # Black used for noise.
-        col = [0, 0, 0, 1]
-
-    class_member_mask = (labels == k)
-
-    #if type(X) != np.ndarray:
-    #    X = X.toarray()
-    xy = transformed_centroids[class_member_mask]
-    
-    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-             markeredgecolor='k', markersize=14)
-
-    #xy = transformed_centroids[class_member_mask]
-    #plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-    #         markeredgecolor='k', markersize=6)
-
-for i, txt in enumerate(X[-len(km.cluster_centers_):]):
-    plt.annotate(categories[i], (transformed_centroids[len(X) - len(km.cluster_centers_) + i][0], transformed_centroids[len(X) - len(km.cluster_centers_) + i][1]), weight='bold')
-    
-plt.title('Estimated number of clusters: %d' % true_k)
-plt.show()
-    
-    
-          
-plt.scatter(transformed_centroids[:, 0][0:len(X) - len(km.cluster_centers_)],
-    transformed_centroids[:, 1][0:len(X) - len(km.cluster_centers_)], marker='o')
-    
-plt.scatter(transformed_centroids[:, 0][len(X) - len(km.cluster_centers_):],
-    transformed_centroids[:, 1][len(X) - len(km.cluster_centers_):], marker='x')
-for i, txt in enumerate(X[-len(km.cluster_centers_):]):
-    plt.annotate(categories[i], (transformed_centroids[len(X) - len(km.cluster_centers_) + i][0], transformed_centroids[len(X) - len(km.cluster_centers_) + i][1]))
-centers = km.cluster_centers_
-
-#plt.scatter(transformed_centroids1[:, 0], transformed_centroids1[:, 1], c='black', s=200, alpha=0.5);
-plt.show()
 
 
 MDS()
@@ -323,25 +339,18 @@ MDS()
 mds = MDS(n_components=2, dissimilarity="precomputed", random_state=1)
 from sklearn.metrics.pairwise import cosine_similarity
 
-print('9999', X)
-#print('9999', km.cluster_centers_)
-#for i in range(len(km.cluster_centers_)):
-#X = np.append(X, km.cluster_centers_, axis=0)
-#print('9999', X)
-#dist = 1 - cosine_similarity(X)
-#pos = mds.fit_transform(X)  # shape (n_components, n_samples)
+
+dist = 1 - cosine_similarity(X[0:500])
+pos = mds.fit_transform(dist)  # shape (n_components, n_samples)
 
 xs, ys = pos[:, 0], pos[:, 1]
 
 plt.scatter(pos[:, 0], pos[:, 1], marker='o')
 
-#dist2 = 1 - cosine_similarity(km.cluster_centers_[0:4])
-dist2 = km.cluster_centers_
+dist2 = 1 - cosine_similarity(km.cluster_centers_)
 pos2 = mds.fit_transform(dist2)
 
-#plt.scatter(pos2[:, 0][0:4], pos2[:, 1][0:4], marker='x')
-#print('444444444444', pos2)
-
+plt.scatter(pos2[:, 0], pos2[:, 1], marker='x')
 plt.show()
 
 if not opts.use_hashing:
