@@ -142,7 +142,7 @@ def loaddocuments():
     r = ''
     
     df = pd.read_excel('./path_module2.xlsx')
-    #df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL')] #   | (df['MODULENAME'] == 'RT_NSE')]
+    #df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL') | (df['MODULENAME'] == 'RT_NSE') | \
     #    (df['MODULENAME'] =='RTADAPT_FWD_FRAME') | (df['MODULENAME'] =='NP_HAL') | (df['MODULENAME'] =='RT_NSE')]
     j  = 0
     target = np.zeros((df.count()['MODULENAME'],), dtype=np.int64)
@@ -189,7 +189,7 @@ if opts.use_hashing:
                                        binary=False)
 else:
     vectorizer = TfidfVectorizer(max_df=0.5, max_features=opts.n_features,
-                                 min_df=2, stop_words='english',
+                                 min_df=2,
                                  use_idf=opts.use_idf)
 X = vectorizer.fit_transform(dataset.data)
 
@@ -231,7 +231,21 @@ print("Clustering sparse data with %s" % km)
 t0 = time()
 km.fit(X)
 
+if not opts.minibatch:
+    Sum_of_squared_distances = []
+    K = range(1,100)
+    for k in K:
+        km1 = KMeans(n_clusters=k, init='k-means++', max_iter=100, n_init=1)
+        km1 = km1.fit(X)
+        print('Clusters={}'.format(k))
+        Sum_of_squared_distances.append(km1.inertia_)
 
+
+    plt.plot(K, Sum_of_squared_distances, 'bx-')
+    plt.xlabel('k')
+    plt.ylabel('Sum_of_squared_distances')
+    plt.title('Elbow Method For Optimal k')
+    plt.show()
 y_kmeans = km.predict(X)
 
 print("done in %0.3fs" % (time() - t0))

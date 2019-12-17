@@ -147,8 +147,8 @@ def loaddocuments():
     r = ''
 
     df = pd.read_excel('./path_module2.xlsx')
-    #df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL') | (df['MODULENAME'] == 'RT_NSE')]
-    #    (df['MODULENAME'] =='RTADAPT_FWD_FRAME') | (df['MODULENAME'] =='NP_HAL') | (df['MODULENAME'] =='RT_NSE')]
+    df = df[(df['MODULENAME'] == 'BR_AAA') | (df['MODULENAME'] == 'NP_HAL') | (df['MODULENAME'] == 'RT_NSE')]
+        (df['MODULENAME'] =='RTADAPT_FWD_FRAME') | (df['MODULENAME'] =='NP_HAL') | (df['MODULENAME'] =='RT_NSE')]
     j  = 0
     target = np.zeros((df.count()['MODULENAME'],), dtype=np.int64)
     categories = df['MODULENAME'].unique().tolist()
